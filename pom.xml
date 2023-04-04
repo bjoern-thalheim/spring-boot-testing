@@ -69,9 +69,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <classesdirectory>${project.build.outputDirectory}</classesdirectory>
-                </configuration>
             </plugin>
         </plugins>
     </build>
