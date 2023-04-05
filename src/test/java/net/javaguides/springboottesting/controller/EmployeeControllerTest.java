@@ -6,15 +6,12 @@ import net.javaguides.springboottesting.model.Employee;
 import net.javaguides.springboottesting.service.EmployeeService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.BDDMockito;
 import org.mockito.Captor;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.List;
 import java.util.Optional;
@@ -86,7 +83,7 @@ class EmployeeControllerTest {
         given(service.getById(any(Long.class)))
                 .willReturn(Optional.of(employee));
         // when
-        ResultActions result = mockMvc.perform(get("/api/employees/%s".formatted(Long.toString(employee.getId()))));
+        ResultActions result = mockMvc.perform(get("/api/employees/{id}", employee.getId()));
         // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.lastName", is(employee.getLastName())))
@@ -100,10 +97,78 @@ class EmployeeControllerTest {
         given(service.getById(any(Long.class)))
                 .willReturn(Optional.empty());
         // when
-        ResultActions result = mockMvc.perform(get("/api/employees/%s".formatted("42")));
+        ResultActions result = mockMvc.perform(get("/api/employees/{id}", employee.getId()));
         // then
         result.andExpect(status().isNotFound());
-        verify(service).getById(eq(42L));
+        verify(service).getById(eq(employee.getId()));
+    }
+
+    @Test
+    public void testUpdateEmployee() throws Exception {
+        // given
+        given(service.getById(any(Long.class)))
+                .willReturn(Optional.of(employee));
+        given(service.save(any(Employee.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        // when
+        Employee updated = employee.toBuilder()
+                .firstName("Ramesh").lastName("Fadatare").email("ramesh@gmail.com")
+                .build();
+        ResultActions result = mockMvc.perform(put("/api/employees/{id}", employee.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updated)));
+        // then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastName", is(updated.getLastName())))
+                .andExpect(jsonPath("$.firstName", is(updated.getFirstName())))
+                .andExpect(jsonPath("$.email", is(updated.getEmail())));
+        verify(service).getById(eq(employee.getId()));
+        verify(service).save(employeeArgumentCaptor.capture());
+        assertThat(employeeArgumentCaptor.getValue()).usingRecursiveComparison().isEqualTo(employee);
+    }
+
+    @Test
+    public void testUpdateEmployeeWithInvalidId() throws Exception {
+        // given
+        given(service.getById(any(Long.class)))
+                .willReturn(Optional.empty());
+        // when
+        ResultActions result = mockMvc.perform(put("/api/employees/{id}", employee.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(employee)));
+        // then
+        result.andExpect(status().isNotFound());
+        verify(service).getById(eq(employee.getId()));
+        verify(service, never()).save(any());
+    }
+
+    @Test
+    public void testDeleteEmployee() throws Exception {
+        // given
+        given(service.getById(any(Long.class)))
+                .willReturn(Optional.of(employee));
+        willDoNothing().given(service).delete(any());
+        // when
+        ResultActions result = mockMvc.perform(delete("/api/employees/{id}", employee.getId()));
+        // then
+        result.andExpect(status().isOk());
+        verify(service).getById(eq(employee.getId()));
+        verify(service).delete(employeeArgumentCaptor.capture());
+        assertThat(employeeArgumentCaptor.getValue()).usingRecursiveComparison().isEqualTo(employee);
+    }
+
+    @Test
+    public void testDeleteEmployeeWithInvalidId() throws Exception {
+        // given
+        given(service.getById(any(Long.class)))
+                .willReturn(Optional.empty());
+        willDoNothing().given(service).delete(any());
+        // when
+        ResultActions result = mockMvc.perform(delete("/api/employees/{id}", employee.getId()));
+        // then
+        result.andExpect(status().isNotFound());
+        verify(service).getById(eq(employee.getId()));
+        verify(service, never()).delete(any());
     }
 
 }

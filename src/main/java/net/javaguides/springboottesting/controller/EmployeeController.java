@@ -32,4 +32,20 @@ public class EmployeeController {
     public Employee getById(@PathVariable("id") long id) {
         return service.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
+
+    @PutMapping("/{id}")
+    public Employee update(@PathVariable("id") long id, @RequestBody Employee employee) {
+        Employee entity = getById(id);
+        entity.setFirstName(employee.getFirstName());
+        entity.setLastName(employee.getLastName());
+        entity.setEmail(employee.getEmail());
+        return service.save(entity);
+    }
+
+    @DeleteMapping("/{id}")
+    public Employee delete(@PathVariable("id") long id) {
+        Employee employee = getById(id);
+        service.delete(employee);
+        return employee;
+    }
 }
